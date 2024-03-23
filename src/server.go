@@ -6,18 +6,17 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/itse4elhaam/togo-api.git/src/handlers"
 	"github.com/joho/godotenv"
 )
 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello, World!")
-}
 
 func main() {
 	// in golang := is used as declaration + assignment operator
 	// it will infer types automatically and not let you do the wrong assignment
 
-	http.HandleFunc("/", helloHandler)
+	http.HandleFunc("/api/todos", todoHandler.TodosController)
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
