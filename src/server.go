@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func connectDb(connectionString string) {
+func connectDb(connectionString string) *mongo.Client {
 	clientOptions := options.Client().ApplyURI(connectionString)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -27,16 +27,13 @@ func connectDb(connectionString string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Println("Connected to MongoDB!")
+	return client
 }
 
 func main() {
 	// in golang := is used as declaration + assignment operator
 	// it will infer types automatically and not let you do the wrong assignment
-
-	http.HandleFunc("/api/todos", todoHandler.TodosController)
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -45,8 +42,11 @@ func main() {
 	if connectionString == "" {
 		log.Fatal("DB_URL environment variable not set")
 	}
-
-	connectDb(connectionString)
+	
+	dbClient := connectDb(connectionString)
+	http.HandleFunc("/api/todos", func (w http.ResponseWriter, r *http.Request){
+		todoHandler.TodosController(w,r,dbClient)
+	})
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -54,4 +54,7 @@ func main() {
 	}
 	fmt.Println("\nThe server is up and running on: http://localhost:" + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
+
+	// routes
+
 }
