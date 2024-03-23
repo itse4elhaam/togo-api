@@ -18,7 +18,6 @@ func TodosController(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET /api/todo/
 func GetTodos(w http.ResponseWriter, r *http.Request) {
 	todos := []m.Todo{
 		{
