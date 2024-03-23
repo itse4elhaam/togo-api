@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/itse4elhaam/togo-api.git/src/handlers"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -42,10 +43,13 @@ func main() {
 	if connectionString == "" {
 		log.Fatal("DB_URL environment variable not set")
 	}
-	
+
 	dbClient := connectDb(connectionString)
-	http.HandleFunc("/api/todos", func (w http.ResponseWriter, r *http.Request){
-		todoHandler.TodosController(w,r,dbClient)
+	http.HandleFunc("/api/todos/", func(w http.ResponseWriter, r *http.Request) {
+		todoHandler.TodosController(w, r, dbClient, "")
+	})
+	http.HandleFunc("/api/todos/{userID}", func(w http.ResponseWriter, r *http.Request) {
+		todoHandler.TodosController(w, r, dbClient, mux.Vars(r)["userID"])
 	})
 
 	port := os.Getenv("PORT")
