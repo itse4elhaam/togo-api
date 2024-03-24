@@ -46,11 +46,9 @@ func main() {
 
 	dbClient := connectDb(connectionString)
 	http.HandleFunc("/api/todos", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("called main func")
 		todoHandler.TodosController(w, r, dbClient, "")
 	})
 	http.HandleFunc("/api/todos/{todoId}", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("called main func with id")
 		pathFragments := strings.Split(r.URL.Path, "/")
 		todoId := pathFragments[len(pathFragments)-1]
 		todoHandler.TodosController(w, r, dbClient, todoId)

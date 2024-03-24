@@ -76,7 +76,6 @@ func createTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client) 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Println("new todo", t)
 	// why not just get the collection in props instead ?
 	collection := dbClient.Database("togoDb").Collection("todos")
 	insertResult, err := collection.InsertOne(context.TODO(), t)
@@ -91,8 +90,50 @@ func createTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client) 
 }
 
 func updateTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, todoId string) {
-	fmt.Println(todoId)
+	var t m.Todo
+	err := json.NewDecoder(r.Body).Decode(&t)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// &t.Completed is used because that is the only way to check if it is null or not
+	if t.Title == "" && &t.Completed == nil {
+		http.Error(w, "Nothing to update", http.StatusBadRequest)
+		return
+	}
 
+	collection := dbClient.Database("togoDb").Collection("todos")
+	id, _ := primitive.ObjectIDFromHex(todoId)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	update := bson.D{}
+	if t.Title != "" {
+		update = append(update, bson.E{Key: "title", Value: t.Title})
+	}
+	if &t.Completed != nil {
+		update = append(update, bson.E{Key: "completed", Value: t.Completed})
+	}
+
+	if len(update) == 0 {
+		return
+	}
+
+	update = bson.D{{Key: "$set", Value: update}}
+	filter := bson.D{{Key: "_id", Value: id}}
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if result.ModifiedCount == 0{
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+	fmt.Println("Updated Documents: ", result.ModifiedCount)
+	var foundTodo m.Todo
+	err = collection.FindOne(context.TODO(), filter).Decode(&foundTodo)
+	if err != nil {
+		log.Fatal("ok")
+	}
 }
 
 func deleteTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, todoId string) {
@@ -118,5 +159,4 @@ func deleteTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, 
 		log.Fatal(err)
 	}
 	fmt.Printf("Deleted documents: %v\n", result.DeletedCount)
-
 }
