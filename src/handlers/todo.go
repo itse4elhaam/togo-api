@@ -14,7 +14,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// todo create a mapper to simplify this logic
+// some general notes : 
+/*
+- bson is used alot because binary json is the standard format for mongodb data base, hence in order to do CRUD we often need to convert info into that format
+- functions with capital first character is public and can be used in other files but the lowercase ones are private to the they're in
+- in order to convert anything into json we use this function(err := json.NewDecoder(r.Body).Decode(&t)), it takes a reference to object we want to store it in 
+
+*/
+
 func TodosController(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, todoId string) {
 	if r.Method == "POST" {
 		createTodo(w, r, dbClient)
@@ -37,6 +44,7 @@ func getTodos(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// we get the data in a cursor because the data could be large, this is a good way to optimize that
 	cursor, err := collection.Find(ctx, bson.D{}) // Find all (empty filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -44,7 +52,8 @@ func getTodos(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client) {
 	}
 	defer cursor.Close(ctx) // Important: Close cursor when done
 
-	var todos []m.Todo // Slice to store results
+	// looping over the cursor and decoding it to store it in the todos array
+	var todos []m.Todo 
 	for cursor.Next(ctx) {
 		var todo m.Todo
 		if err := cursor.Decode(&todo); err != nil {
@@ -57,7 +66,6 @@ func getTodos(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client) {
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(todos)
 	if err != nil {
-		// Handle encoding errors
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -141,9 +149,7 @@ func deleteTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, 
 		http.Error(w, "Todo id cannot be null", http.StatusBadRequest)
 		return
 	}
-	fmt.Println("todoid", todoId)
 	objectID, err := primitive.ObjectIDFromHex(todoId)
-	fmt.Println("objectID", objectID)
 	if err != nil {
 		log.Fatal(err)
 	}
