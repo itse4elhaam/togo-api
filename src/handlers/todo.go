@@ -23,13 +23,11 @@ func TodosController(w http.ResponseWriter, r *http.Request, dbClient *mongo.Cli
 		getTodos(w, r, dbClient)
 		return
 	} else if r.Method == "PATCH" {
-		deleteTodo(w, r, dbClient, todoId)
-
-	} else if r.Method == "DELETE" {
 		updateTodo(w, r, dbClient, todoId)
-
+	} else if r.Method == "DELETE" {
+		deleteTodo(w, r, dbClient, todoId)
 	} else {
-		fmt.Println("method not supported", r.Method)
+		log.Fatal("method not supported", r.Method)
 		return
 	}
 }
@@ -78,7 +76,7 @@ func createTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client) 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	fmt.Println("new todo", t)
 	// why not just get the collection in props instead ?
 	collection := dbClient.Database("togoDb").Collection("todos")
 	insertResult, err := collection.InsertOne(context.TODO(), t)
@@ -90,8 +88,6 @@ func createTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(struct{ ID interface{} }{insertResult.InsertedID})
-	// insert a new todo object into the database
-	fmt.Println(t)
 }
 
 func updateTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, todoId string) {
@@ -100,13 +96,19 @@ func updateTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, 
 }
 
 func deleteTodo(w http.ResponseWriter, r *http.Request, dbClient *mongo.Client, todoId string) {
-	objectID, err := primitive.ObjectIDFromHex(todoId) 
+	if todoId == "" {
+		http.Error(w, "Todo id cannot be null", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("todoid", todoId)
+	objectID, err := primitive.ObjectIDFromHex(todoId)
+	fmt.Println("objectID", objectID)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	filter := bson.D{{Key: "_id", Value: objectID}}
-	collection := dbClient.Database("yourDatabaseName").Collection("todoCollection")
+	collection := dbClient.Database("togoDb").Collection("todos")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
